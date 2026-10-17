@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Remove estilos padrão do html5-qrcode que não combinam com o tema escuro */
+#qr-scanner-container video {
+  border-radius: 12px;
+}
+
+#qr-scanner-container #qr-shaded-region {
+  border: 2px solid #10b981 !important;
+}
+
+/* Esconde o footer do html5-qrcode */
+#qr-scanner-container > div:last-child {
+  display: none !important;
+}
+
+@media print {
+  .print\:hidden {
+    display: none !important;
+  }
+}
