@@ -5,26 +5,38 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 
 const Scanner = dynamic(() => import('@/components/Scanner'), { ssr: false })
-const QRBatch = dynamic(() => import('@/components/QRBatch'), { ssr: false })
+const QRCreate = dynamic(() => import('@/components/QRCreate'), { ssr: false })
 
 interface QRCode {
   id: string
   name: string | null
-  google_review: string | null
-  instagram: string | null
-  whatsapp: string | null
-  tiktok: string | null
-  facebook: string | null
-  website: string | null
+  url: string | null
   created_at: string
 }
 
-function hasLinks(qr: QRCode) {
-  return !!(qr.google_review || qr.instagram || qr.whatsapp || qr.tiktok || qr.facebook || qr.website)
-}
+function QRImage({ value }: { value: string }) {
+  const [src, setSrc] = useState('')
 
-function countLinks(qr: QRCode) {
-  return [qr.google_review, qr.instagram, qr.whatsapp, qr.tiktok, qr.facebook, qr.website].filter(Boolean).length
+  useEffect(() => {
+    import('qrcode').then((QRCode) => {
+      QRCode.toDataURL(value, {
+        width: 72,
+        margin: 1,
+        color: { dark: '#000000', light: '#ffffff' },
+      }).then(setSrc)
+    })
+  }, [value])
+
+  if (!src) {
+    return <div className="w-14 h-14 bg-zinc-800 rounded-lg animate-pulse flex-shrink-0" />
+  }
+  return (
+    <img
+      src={src}
+      alt="QR"
+      className="w-14 h-14 rounded-lg flex-shrink-0 bg-white p-0.5"
+    />
+  )
 }
 
 export default function DashboardPage() {
@@ -32,7 +44,11 @@ export default function DashboardPage() {
   const [codes, setCodes] = useState<QRCode[]>([])
   const [loading, setLoading] = useState(true)
   const [showScanner, setShowScanner] = useState(false)
-  const [showBatch, setShowBatch] = useState(false)
+  const [showCreate, setShowCreate] = useState(false)
+  const baseUrl =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_BASE_URL || ''
 
   const fetchCodes = useCallback(async () => {
     try {
@@ -44,7 +60,7 @@ export default function DashboardPage() {
       const data = await res.json()
       setCodes(data)
     } catch {
-      // silently fail
+      // ignore
     } finally {
       setLoading(false)
     }
@@ -59,18 +75,21 @@ export default function DashboardPage() {
     router.push('/admin')
   }
 
-  const configured = codes.filter(hasLinks).length
-  const unconfigured = codes.filter((c) => !hasLinks(c)).length
+  const configured = codes.filter((c) => c.url).length
+  const empty = codes.filter((c) => !c.url).length
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Scanner modal */}
       {showScanner && <Scanner onClose={() => setShowScanner(false)} />}
-      {showBatch && (
-        <QRBatch onClose={() => { setShowBatch(false); fetchCodes() }} />
+      {showCreate && (
+        <QRCreate
+          onClose={(created) => {
+            setShowCreate(false)
+            if (created) fetchCodes()
+          }}
+        />
       )}
 
-      {/* Header */}
       <header className="p-4 border-b border-zinc-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center">
@@ -90,7 +109,7 @@ export default function DashboardPage() {
       </header>
 
       <main className="flex-1 p-4 max-w-2xl mx-auto w-full space-y-4">
-        {/* Ações principais */}
+        {/* Ações */}
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => setShowScanner(true)}
@@ -110,18 +129,17 @@ export default function DashboardPage() {
           </button>
 
           <button
-            onClick={() => setShowBatch(true)}
+            onClick={() => setShowCreate(true)}
             className="bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-white rounded-2xl p-5 flex flex-col items-center gap-3 transition-all border border-zinc-700"
           >
             <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </div>
             <div className="text-center">
-              <p className="font-bold text-lg leading-tight">Gerar</p>
-              <p className="text-zinc-400 text-sm">Novos QR Codes</p>
+              <p className="font-bold text-lg leading-tight">Novo QR</p>
+              <p className="text-zinc-400 text-sm">Criar plaquinha</p>
             </div>
           </button>
         </div>
@@ -135,29 +153,29 @@ export default function DashboardPage() {
             </div>
             <div className="bg-zinc-900 rounded-xl p-3 text-center border border-zinc-800">
               <p className="text-2xl font-bold text-emerald-400">{configured}</p>
-              <p className="text-zinc-500 text-xs mt-1">Ativos</p>
+              <p className="text-zinc-500 text-xs mt-1">Com link</p>
             </div>
             <div className="bg-zinc-900 rounded-xl p-3 text-center border border-zinc-800">
-              <p className="text-2xl font-bold text-zinc-500">{unconfigured}</p>
-              <p className="text-zinc-500 text-xs mt-1">Vazios</p>
+              <p className="text-2xl font-bold text-zinc-500">{empty}</p>
+              <p className="text-zinc-500 text-xs mt-1">Sem link</p>
             </div>
           </div>
         )}
 
-        {/* Lista de QR Codes */}
+        {/* Lista */}
         <div>
           <h2 className="text-zinc-400 text-sm font-medium mb-3 px-1">Plaquinhas</h2>
 
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-zinc-900 rounded-xl h-20 animate-pulse border border-zinc-800" />
+                <div key={i} className="bg-zinc-900 rounded-xl h-24 animate-pulse border border-zinc-800" />
               ))}
             </div>
           ) : codes.length === 0 ? (
             <div className="bg-zinc-900 rounded-xl p-8 border border-zinc-800 text-center">
               <p className="text-zinc-500">Nenhuma plaquinha ainda.</p>
-              <p className="text-zinc-600 text-sm mt-1">Clique em "Gerar" para criar as primeiras.</p>
+              <p className="text-zinc-600 text-sm mt-1">Clique em "Novo QR" para criar a primeira.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -167,30 +185,24 @@ export default function DashboardPage() {
                   onClick={() => router.push(`/admin/edit/${code.id}`)}
                   className="w-full bg-zinc-900 hover:bg-zinc-800 active:scale-[0.98] border border-zinc-800 hover:border-zinc-700 rounded-xl p-4 flex items-center gap-4 transition-all text-left"
                 >
-                  {/* Status indicator */}
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${hasLinks(code) ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                  {/* QR Code thumbnail */}
+                  <QRImage value={`${baseUrl}/r/${code.id}`} />
 
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-medium truncate">
-                      {code.name || <span className="text-zinc-500">Sem nome</span>}
+                      {code.name || <span className="text-zinc-500 italic">Sem nome</span>}
                     </p>
-                    <p className="text-zinc-500 text-sm font-mono">{code.id}</p>
+                    <p className="text-zinc-600 text-xs font-mono mt-0.5">{code.id}</p>
+                    {code.url ? (
+                      <p className="text-emerald-400 text-xs truncate mt-0.5">{code.url}</p>
+                    ) : (
+                      <p className="text-zinc-600 text-xs mt-0.5">Sem link configurado</p>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {hasLinks(code) ? (
-                      <span className="text-xs text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-lg">
-                        {countLinks(code)} link{countLinks(code) !== 1 ? 's' : ''}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-zinc-500 bg-zinc-800 px-2 py-1 rounded-lg">
-                        Vazio
-                      </span>
-                    )}
-                    <svg className="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
+                  <svg className="w-4 h-4 text-zinc-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
               ))}
             </div>
