@@ -3,9 +3,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { generateRoundedQR } from '@/lib/qr-styled'
 
-type QRType = 'url' | 'whatsapp' | 'instagram' | 'wifi' | 'maps' | 'google_reviews'
+const CardPreview = dynamic(() => import('@/components/CardPreview'), { ssr: false })
+
+type QRType = 'url' | 'whatsapp' | 'instagram' | 'wifi' | 'google_reviews'
 
 interface FormState {
   name: string
@@ -20,8 +23,6 @@ interface FormState {
   wifiSsid: string
   wifiPassword: string
   wifiSecurity: 'WPA' | 'WEP' | 'nopass'
-  // maps type
-  address: string
   // google_reviews type
   reviewUrl: string
 }
@@ -37,8 +38,6 @@ function buildUrl(form: FormState): string {
       return `https://instagram.com/${form.instagram.replace(/^@/, '')}`
     case 'wifi':
       return `WIFI:T:${form.wifiSecurity};S:${form.wifiSsid};P:${form.wifiPassword};;`
-    case 'maps':
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.address)}`
     case 'google_reviews':
       return form.reviewUrl.trim()
     case 'url':
@@ -65,12 +64,6 @@ function parseExisting(url: string | null, type: QRType): Partial<FormState> {
       const security = (url.match(/T:([^;]*)/)?.[1] || 'WPA') as 'WPA' | 'WEP' | 'nopass'
       return { wifiSsid: ssid, wifiPassword: password, wifiSecurity: security }
     }
-    case 'maps': {
-      try {
-        const u = new URL(url)
-        return { address: decodeURIComponent(u.searchParams.get('query') || '') }
-      } catch { return { address: url } }
-    }
     case 'google_reviews':
       return { reviewUrl: url }
     case 'url':
@@ -93,9 +86,10 @@ const TYPE_OPTIONS: { value: QRType; label: string; emoji: string; desc: string 
   { value: 'instagram',      label: 'Instagram',          emoji: '📸', desc: 'Abre perfil no Instagram' },
   { value: 'wifi',           label: 'Rede Wi-Fi',         emoji: '📶', desc: 'Conecta automaticamente ao Wi-Fi' },
   { value: 'google_reviews', label: 'Google Avaliações',  emoji: '⭐', desc: 'Abre página de avaliações no Google' },
-  { value: 'maps',           label: 'Google Maps',        emoji: '📍', desc: 'Abre endereço no Maps' },
   { value: 'url',            label: 'URL Personalizada',  emoji: '🔗', desc: 'Qualquer link da internet' },
 ]
+
+const CARD_TYPES = new Set(['whatsapp', 'instagram', 'wifi', 'google_reviews'])
 
 export default function EditPage() {
   const { id } = useParams<{ id: string }>()
@@ -111,7 +105,6 @@ export default function EditPage() {
     wifiSsid: '',
     wifiPassword: '',
     wifiSecurity: 'WPA',
-    address: '',
     reviewUrl: '',
   })
   const [loading, setLoading] = useState(true)
@@ -369,24 +362,6 @@ export default function EditPage() {
             </div>
           )}
 
-          {form.type === 'maps' && (
-            <div>
-              <label className="block text-zinc-400 text-sm mb-2">Endereço</label>
-              <input
-                type="text"
-                value={form.address}
-                onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="Rua das Flores, 123, São Paulo - SP"
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 transition-colors"
-              />
-              {form.address && (
-                <p className="text-zinc-500 text-xs mt-2">
-                  Vai abrir o Google Maps com o endereço digitado
-                </p>
-              )}
-            </div>
-          )}
-
           {form.type === 'url' && (
             <div>
               <label className="block text-zinc-400 text-sm mb-2">URL de destino</label>
@@ -398,6 +373,14 @@ export default function EditPage() {
                 className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
+          )}
+
+          {/* Card preview */}
+          {CARD_TYPES.has(form.type) && qrDataUrl && (
+            <CardPreview
+              type={form.type as 'whatsapp' | 'instagram' | 'wifi' | 'google_reviews'}
+              qrDataUrl={qrDataUrl}
+            />
           )}
 
           {error && (

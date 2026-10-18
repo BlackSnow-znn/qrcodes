@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { generateRoundedQR } from '@/lib/qr-styled'
 
-type QRType = 'url' | 'whatsapp' | 'instagram' | 'wifi' | 'maps' | 'google_reviews'
+const CardPreview = dynamic(() => import('@/components/CardPreview'), { ssr: false })
+
+type QRType = 'url' | 'whatsapp' | 'instagram' | 'wifi' | 'google_reviews'
 
 interface FormState {
   name: string
@@ -29,8 +32,6 @@ function buildUrl(form: FormState): string {
       return `https://instagram.com/${form.instagram.replace(/^@/, '')}`
     case 'wifi':
       return `WIFI:T:${form.wifiSecurity};S:${form.wifiSsid};P:${form.wifiPassword};;`
-    case 'maps':
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.address)}`
     case 'google_reviews':
       return form.reviewUrl.trim()
     case 'url':
@@ -53,9 +54,10 @@ const TYPE_OPTIONS: { value: QRType; label: string; emoji: string; desc: string 
   { value: 'instagram',      label: 'Instagram',          emoji: '📸', desc: 'Abre perfil no Instagram' },
   { value: 'wifi',           label: 'Rede Wi-Fi',         emoji: '📶', desc: 'Conecta ao Wi-Fi automático' },
   { value: 'google_reviews', label: 'Google Avaliações',  emoji: '⭐', desc: 'Página de avaliações' },
-  { value: 'maps',           label: 'Google Maps',        emoji: '📍', desc: 'Abre endereço no Maps' },
   { value: 'url',            label: 'URL Personalizada',  emoji: '🔗', desc: 'Qualquer link da internet' },
 ]
+
+const CARD_TYPES = new Set(['whatsapp', 'instagram', 'wifi', 'google_reviews'])
 
 const DEFAULT_FORM: FormState = {
   name: '',
@@ -278,19 +280,6 @@ export default function QRCreate({ onClose }: { onClose: (created?: boolean) => 
             </div>
           )}
 
-          {form.type === 'maps' && (
-            <div>
-              <label className="text-zinc-400 text-sm block mb-1.5">Endereço</label>
-              <input
-                type="text"
-                value={form.address}
-                onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="Rua das Flores, 123, São Paulo"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 transition-colors"
-              />
-            </div>
-          )}
-
           {form.type === 'url' && (
             <div>
               <label className="text-zinc-400 text-sm block mb-1.5">URL de destino</label>
@@ -303,6 +292,14 @@ export default function QRCreate({ onClose }: { onClose: (created?: boolean) => 
               />
               <p className="text-zinc-600 text-xs mt-1.5">Pode configurar depois pela lista</p>
             </div>
+          )}
+
+          {/* Card preview */}
+          {CARD_TYPES.has(form.type) && qrDataUrl && (
+            <CardPreview
+              type={form.type as 'whatsapp' | 'instagram' | 'wifi' | 'google_reviews'}
+              qrDataUrl={qrDataUrl}
+            />
           )}
 
           {error && <p className="text-red-400 text-sm">{error}</p>}
