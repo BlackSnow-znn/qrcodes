@@ -198,7 +198,7 @@ export default function EditPage() {
         {/* QR Preview */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-6 flex flex-col items-center gap-4">
           {qrDataUrl ? (
-            <div className="bg-white p-3 rounded-xl">
+            <div className="bg-white p-3 rounded-2xl overflow-hidden">
               <img src={qrDataUrl} alt="QR Code" className="w-40 h-40" />
             </div>
           ) : (

@@ -133,7 +133,7 @@ export default function QRCreate({ onClose }: { onClose: (created?: boolean) => 
           {/* QR Preview */}
           <div className="flex justify-center">
             {qrDataUrl ? (
-              <div className="bg-white p-2.5 rounded-xl">
+              <div className="bg-white p-2.5 rounded-2xl overflow-hidden">
                 <img src={qrDataUrl} alt="Preview QR" className="w-28 h-28" />
               </div>
             ) : (

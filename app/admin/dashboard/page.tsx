@@ -27,11 +27,9 @@ function QRImage({ value }: { value: string }) {
     return <div className="w-14 h-14 bg-zinc-800 rounded-lg animate-pulse flex-shrink-0" />
   }
   return (
-    <img
-      src={src}
-      alt="QR"
-      className="w-14 h-14 rounded-lg flex-shrink-0 bg-white p-0.5"
-    />
+    <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-white p-0.5">
+      <img src={src} alt="QR" className="w-full h-full" />
+    </div>
   )
 }
 
