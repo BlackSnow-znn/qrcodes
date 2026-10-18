@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import QRCode from 'qrcode'
+import { generateRoundedQR } from '@/lib/qr-styled'
 
 type QRType = 'url' | 'whatsapp' | 'instagram' | 'wifi' | 'maps' | 'google_reviews'
 
@@ -122,11 +122,7 @@ export default function EditPage() {
 
   // Generate QR for the public redirect URL (what's printed on the plate)
   useEffect(() => {
-    QRCode.toDataURL(publicUrl, {
-      width: 200,
-      margin: 2,
-      color: { dark: '#000000', light: '#ffffff' },
-    }).then(setQrDataUrl).catch(() => {})
+    generateRoundedQR(publicUrl, 200).then(setQrDataUrl).catch(() => {})
   }, [publicUrl])
 
   useEffect(() => {

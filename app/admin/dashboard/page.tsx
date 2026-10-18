@@ -18,12 +18,8 @@ function QRImage({ value }: { value: string }) {
   const [src, setSrc] = useState('')
 
   useEffect(() => {
-    import('qrcode').then((QRCode) => {
-      QRCode.toDataURL(value, {
-        width: 72,
-        margin: 1,
-        color: { dark: '#000000', light: '#ffffff' },
-      }).then(setSrc)
+    import('@/lib/qr-styled').then(({ generateRoundedQR }) => {
+      generateRoundedQR(value, 72).then(setSrc).catch(() => {})
     })
   }, [value])
 

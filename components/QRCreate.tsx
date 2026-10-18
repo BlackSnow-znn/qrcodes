@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import QRCode from 'qrcode'
+import { generateRoundedQR } from '@/lib/qr-styled'
 
 type QRType = 'url' | 'whatsapp' | 'instagram' | 'wifi' | 'maps' | 'google_reviews'
 
@@ -83,11 +83,7 @@ export default function QRCreate({ onClose }: { onClose: (created?: boolean) => 
       setQrDataUrl('')
       return
     }
-    QRCode.toDataURL(url, {
-      width: 160,
-      margin: 2,
-      color: { dark: '#000000', light: '#ffffff' },
-    }).then(setQrDataUrl).catch(() => setQrDataUrl(''))
+    generateRoundedQR(url, 160).then(setQrDataUrl).catch(() => setQrDataUrl(''))
   }, [form])
 
   const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
