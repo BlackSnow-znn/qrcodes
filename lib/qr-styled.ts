@@ -1,44 +1,52 @@
 /**
- * Generates a styled QR code with rounded dots and returns a data URL.
- * Only runs client-side (browser).
+ * Generates a QR code with rounded dots using canvas.
+ * Client-side only.
  */
 export async function generateRoundedQR(url: string, size: number = 200): Promise<string> {
-  const QRCodeStyling = (await import('qr-code-styling')).default
+  if (typeof window === 'undefined') throw new Error('Client only')
 
-  const qrCode = new QRCodeStyling({
-    width: size,
-    height: size,
-    data: url,
-    margin: Math.round(size * 0.04),
-    dotsOptions: {
-      color: '#000000',
-      type: 'rounded',
-    },
-    cornersSquareOptions: {
-      color: '#000000',
-      type: 'extra-rounded',
-    },
-    cornersDotOptions: {
-      color: '#000000',
-      type: 'dot',
-    },
-    backgroundOptions: {
-      color: '#ffffff',
-    },
-    imageOptions: {
-      hideBackgroundDots: true,
-      imageSize: 0.4,
-      margin: 4,
-    },
-  })
+  const QRCode = await import('qrcode')
+  // create() returns the raw QR matrix
+  const qr = (QRCode as any).create(url, { errorCorrectionLevel: 'M' })
 
-  const blob = await qrCode.getRawData('png')
-  if (!blob) throw new Error('Failed to generate QR')
+  const count: number = qr.modules.size
+  const margin = 2
+  const cell = size / (count + margin * 2)
+  const offset = margin * cell
+  const radius = cell * 0.42 // how rounded the dots are (0 = square, 0.5 = circle)
 
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
-  })
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+
+  // White background
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, size, size)
+
+  ctx.fillStyle = '#000000'
+
+  for (let row = 0; row < count; row++) {
+    for (let col = 0; col < count; col++) {
+      const isDark = qr.modules.data[row * count + col] !== 0
+      if (!isDark) continue
+
+      const x = offset + col * cell + 0.5
+      const y = offset + row * cell + 0.5
+      const w = cell - 1
+      const h = cell - 1
+
+      // Draw rounded rectangle
+      ctx.beginPath()
+      ctx.moveTo(x + radius, y)
+      ctx.arcTo(x + w, y, x + w, y + h, radius)
+      ctx.arcTo(x + w, y + h, x, y + h, radius)
+      ctx.arcTo(x, y + h, x, y, radius)
+      ctx.arcTo(x, y, x + w, y, radius)
+      ctx.closePath()
+      ctx.fill()
+    }
+  }
+
+  return canvas.toDataURL('image/png')
 }
