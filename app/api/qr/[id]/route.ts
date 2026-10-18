@@ -25,6 +25,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         updates[key] = body[key]?.trim() || null
       }
     }
+    if ('type' in body) {
+      updates['type'] = body.type || 'url'
+    }
 
     await db.collection('qr_codes').doc(params.id).update(updates)
     const updated = await db.collection('qr_codes').doc(params.id).get()

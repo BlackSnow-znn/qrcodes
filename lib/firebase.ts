@@ -14,10 +14,13 @@ const app =
 
 export const db = getFirestore(app)
 
+export type QRType = 'url' | 'whatsapp' | 'instagram' | 'wifi' | 'maps'
+
 export type QRCode = {
   id: string
   name: string | null
   url: string | null
+  type?: QRType
   created_at: string
   updated_at?: string
 }

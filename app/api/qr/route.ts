@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     const data = {
       name: body.name?.trim() || null,
       url: body.url?.trim() || null,
+      type: body.type || 'url',
       created_at: new Date().toISOString(),
     }
     await db.collection('qr_codes').doc(id).set(data)
